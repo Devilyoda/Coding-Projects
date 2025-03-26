@@ -1,0 +1,35 @@
+rem Written by Chris Giggleman
+@echo off
+
+echo Collecting Date...
+echo %date% > Giggleman_C_7-1_output.txt
+
+echo Collecting Time...
+time /t >> Giggleman_C_7-1_output.txt
+
+echo Getting System Name...
+hostname >> Giggleman_C_7-1_output.txt
+
+echo Logged in as...
+whoami >> Giggleman_C_7-1_output.txt
+
+echo Running ipconfig...
+ipconfig /all >> Giggleman_C_7-1_output.txt
+
+echo Gathering System Information...
+systeminfo >> Giggleman_C_7-1_output.txt
+
+echo Listing Local Users...
+net user >> Giggleman_C_7-1_output.txt
+
+echo Enumerating Local Administrators...
+net localgroup Administrators >> Giggleman_C_7-1_output.txt
+
+echo Enumerating Network Connections...
+netstat -nao >> Giggleman_C_7-1_output.txt
+
+echo Collecting Date and Time Again...
+echo %date% >> Giggleman_C_7-1_output.txt
+time /t >> Giggleman_C_7-1_output.txt
+
+echo Script execution completed.
