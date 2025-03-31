@@ -1,0 +1,7 @@
+rom scapy.all import *
+
+def packet_callback(packet):
+    print(packet.summary())
+
+print("Starting network sniffer...")
+sniff(prn=packet_callback, store=0)
