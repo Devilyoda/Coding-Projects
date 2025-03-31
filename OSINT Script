@@ -1,0 +1,16 @@
+import requests
+import json
+
+def shodan_search(api_key, query):
+    url = f"https://api.shodan.io/shodan/host/search?key={api_key}&query={query}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": "Unable to fetch data"}
+
+# Example Usage
+SHODAN_API_KEY = "YOUR_SHODAN_API_KEY"
+query = "apache"
+data = shodan_search(SHODAN_API_KEY, query)
+print(json.dumps(data, indent=4))
