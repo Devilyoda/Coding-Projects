@@ -1,0 +1,24 @@
+import os
+import hashlib
+
+# Define files to monitor
+files_to_monitor = ["/etc/passwd", "/etc/shadow", "/var/www/html/index.html"]
+
+def get_file_hash(file_path):
+    if not os.path.exists(file_path):
+        return None
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        hasher.update(f.read())
+    return hasher.hexdigest()
+
+# Store initial hashes
+hashes = {file: get_file_hash(file) for file in files_to_monitor}
+
+print("Monitoring file integrity...")
+while True:
+    for file in files_to_monitor:
+        current_hash = get_file_hash(file)
+        if current_hash and current_hash != hashes[file]:
+            print(f"WARNING: File {file} has been modified!")
+            hashes[file] = current_hash
