@@ -1,0 +1,43 @@
+import os
+import time
+import subprocess
+
+# Define search parameters
+DAYS_UNUSED = 90  # Files older than this will be flagged
+HOME_DIR = os.path.expanduser("~")
+
+def find_old_files(directory, days):
+    """Find files not accessed in the last 'days' days."""
+    old_files = []
+    cutoff = time.time() - (days * 86400)
+    for root, _, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.isfile(file_path) and os.path.getatime(file_path) < cutoff:
+                old_files.append(file_path)
+    return old_files
+
+def list_unused_programs():
+    """List installed programs using WMIC (Windows)."""
+    try:
+        result = subprocess.run(["wmic", "product", "get", "name"], capture_output=True, text=True)
+        programs = result.stdout.split('\n')[1:]
+        return [p.strip() for p in programs if p.strip()]
+    except Exception as e:
+        print("Error fetching program list:", e)
+        return []
+
+if __name__ == "__main__":
+    print("Scanning for unused files...")
+    old_files = find_old_files(HOME_DIR, DAYS_UNUSED)
+    print("Unused Files:")
+    for f in old_files:
+        print(f)
+    
+    print("\nScanning for installed programs...")
+    unused_programs = list_unused_programs()
+    print("Installed Programs:")
+    for program in unused_programs:
+        print(program)
+    
+    print("\nReview the list before deleting any files or programs.")
