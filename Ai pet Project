@@ -1,0 +1,125 @@
+import pygame
+import pyautogui
+import random
+import time
+import os
+import subprocess
+
+# Initialize Pygame
+pygame.init()
+
+# Set up screen dimensions
+SCREEN_WIDTH, SCREEN_HEIGHT = pyautogui.size()
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME)
+pygame.display.set_caption("Sith Green Warrior AI Pet")
+
+# Load Green Warrior sprite
+sprite = pygame.image.load("green_warrior.png")  # Placeholder, replace with actual sprite
+sprite = pygame.transform.scale(sprite, (100, 100))
+
+# Load additional idle sprites
+meditating_sprite = pygame.image.load("meditating.png")  # Placeholder
+floating_sprite = pygame.image.load("floating.png")  # Placeholder
+frog_sprite = pygame.image.load("frog.png")  # Placeholder
+
+# Load sound effects
+lightsaber_sound = pygame.mixer.Sound("lightsaber.wav")  # Placeholder
+burp_sound = pygame.mixer.Sound("burp.wav")  # Placeholder
+
+# Set initial position
+x, y = random.randint(0, SCREEN_WIDTH - 100), random.randint(0, SCREEN_HEIGHT - 100)
+velocity = 5
+chaos_mode = False
+idle_mode = True
+idle_state = "meditating"
+
+# Chat box settings
+font = pygame.font.Font(None, 32)
+input_box = pygame.Rect(10, SCREEN_HEIGHT - 40, 200, 30)
+color_inactive = pygame.Color('lightskyblue3')
+color_active = pygame.Color('dodgerblue2')
+color = color_inactive
+active = False
+text = ''
+
+running = True
+while running:
+    screen.fill((0, 0, 0, 0))  # Transparent background
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_c:
+                chaos_mode = not chaos_mode  # Toggle chaos mode
+                idle_mode = not chaos_mode  # Disable idle when in chaos
+            elif event.key == pygame.K_RETURN:
+                if text.lower() == "open chrome":
+                    subprocess.run(["chrome.exe"])
+                    print("Your weak mortal tools bore me… but I will comply.")
+                elif text.lower() == "close window":
+                    pyautogui.hotkey('alt', 'f4')
+                    print("Do not waste my power on such trivial tasks.")
+                text = ''
+            elif event.key == pygame.K_BACKSPACE:
+                text = text[:-1]
+            else:
+                text += event.unicode
+    
+    if chaos_mode:
+        # Force pull effect: Move cursor toward Green Warrior
+        cursor_x, cursor_y = pyautogui.position()
+        if cursor_x > x:
+            x += velocity
+        elif cursor_x < x:
+            x -= velocity
+        if cursor_y > y:
+            y += velocity
+        elif cursor_y < y:
+            y -= velocity
+        
+        # Random taunts
+        if random.random() < 0.01:
+            taunts = ["Execute Order 66!", "KENOBI!", "Then you will die!"]
+            print(random.choice(taunts))
+        
+        # Lightsaber slice effect
+        if random.random() < 0.005:  # Random chance to slice
+            lightsaber_sound.play()
+            print("Sith Green Warrior slices the screen!")
+    
+    elif idle_mode:
+        if idle_state == "meditating":
+            screen.blit(meditating_sprite, (x, y))
+            if random.random() < 0.002:  # Change idle state occasionally
+                idle_state = "floating"
+        elif idle_state == "floating":
+            cursor_x, cursor_y = pyautogui.position()
+            if cursor_x > x:
+                x += 2
+            elif cursor_x < x:
+                x -= 2
+            if cursor_y > y:
+                y += 2
+            elif cursor_y < y:
+                y -= 2
+            screen.blit(floating_sprite, (x, y))
+            if random.random() < 0.002:
+                idle_state = "frog_eating"
+        elif idle_state == "frog_eating":
+            screen.blit(frog_sprite, (x, y))
+            time.sleep(1)
+            burp_sound.play()
+            idle_state = "meditating"  # Reset after eating
+    else:
+        screen.blit(sprite, (x, y))
+    
+    # Render chat box
+    txt_surface = font.render(text, True, color)
+    screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+    pygame.draw.rect(screen, color, input_box, 2)
+    
+    pygame.display.update()
+    time.sleep(0.01)
+
+pygame.quit()
