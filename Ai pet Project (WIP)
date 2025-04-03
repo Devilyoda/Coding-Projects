@@ -5,7 +5,7 @@ import time
 import os
 import subprocess
 
-#Python 3.6 or above
+# Python 3.6 or above
 # Initialize Pygame
 pygame.init()
 
