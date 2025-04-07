@@ -5,7 +5,6 @@ import time
 import os
 import subprocess
 
-# Python 3.6 or above
 # Initialize Pygame
 pygame.init()
 
@@ -14,18 +13,22 @@ SCREEN_WIDTH, SCREEN_HEIGHT = pyautogui.size()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME)
 pygame.display.set_caption("Sith Green Warrior AI Pet")
 
-# Load Green Warrior sprite
-sprite = pygame.image.load("green_warrior.png")  # Placeholder, replace with actual sprite
+# Load sprites
+sprite = pygame.image.load("green_warrior.png")  # Placeholder
 sprite = pygame.transform.scale(sprite, (100, 100))
-
-# Load additional idle sprites
-meditating_sprite = pygame.image.load("meditating.png")  # Placeholder
-floating_sprite = pygame.image.load("floating.png")  # Placeholder
-frog_sprite = pygame.image.load("frog.png")  # Placeholder
+meditating_sprite = pygame.image.load("meditating.png")
+floating_sprite = pygame.image.load("floating.png")
+frog_sprite = pygame.image.load("frog.png")
+lightsaber_sprite = pygame.image.load("lightsaber_slash.png")
+force_effect_sprite = pygame.image.load("force_effect.png")
+lightning_sprite = pygame.image.load("lightning.png")
+glowing_eyes_sprite = pygame.image.load("green_warrior_glow_eyes.png")
+tattered_cloak_sprite = pygame.image.load("green_warrior_tattered_cloak.png")
 
 # Load sound effects
-lightsaber_sound = pygame.mixer.Sound("lightsaber.wav")  # Placeholder
-burp_sound = pygame.mixer.Sound("burp.wav")  # Placeholder
+lightsaber_sound = pygame.mixer.Sound("lightsaber.wav")
+burp_sound = pygame.mixer.Sound("burp.wav")
+force_pull_sound = pygame.mixer.Sound("force_pull.wav")
 
 # Set initial position
 x, y = random.randint(0, SCREEN_WIDTH - 100), random.randint(0, SCREEN_HEIGHT - 100)
@@ -43,17 +46,27 @@ color = color_inactive
 active = False
 text = ''
 
+# Lightning entrance control
+first_entry = True
+
 running = True
 while running:
-    screen.fill((0, 0, 0, 0))  # Transparent background
-    
+    screen.fill((0, 0, 0, 0))
+
+    if first_entry:
+        for _ in range(10):
+            screen.blit(lightning_sprite, (x, y))
+            pygame.display.update()
+            time.sleep(0.05)
+        first_entry = False
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_c:
-                chaos_mode = not chaos_mode  # Toggle chaos mode
-                idle_mode = not chaos_mode  # Disable idle when in chaos
+                chaos_mode = not chaos_mode
+                idle_mode = not chaos_mode
             elif event.key == pygame.K_RETURN:
                 if text.lower() == "open chrome":
                     subprocess.run(["chrome.exe"])
@@ -66,44 +79,57 @@ while running:
                 text = text[:-1]
             else:
                 text += event.unicode
-    
+
+    cursor_x, cursor_y = pyautogui.position()
+
     if chaos_mode:
-        # Force pull effect: Move cursor toward Green Warrior
-        cursor_x, cursor_y = pyautogui.position()
-        if cursor_x > x:
-            x += velocity
-        elif cursor_x < x:
-            x -= velocity
-        if cursor_y > y:
-            y += velocity
-        elif cursor_y < y:
-            y -= velocity
-        
-        # Random taunts
+        force_x, force_y = x + 50, y + 50
+        dx = (force_x - cursor_x) * 0.05
+        dy = (force_y - cursor_y) * 0.05
+        pyautogui.moveTo(cursor_x + dx, cursor_y + dy, duration=0.01)
+
+        screen.blit(force_effect_sprite, (x, y))
+        screen.blit(glowing_eyes_sprite, (x, y))
+        screen.blit(tattered_cloak_sprite, (x, y))
+
         if random.random() < 0.01:
-            taunts = ["Execute Order 66!", "KENOBI!", "Then you will die!"]
+            force_pull_sound.play()
+            print("You are drawn to me, as all things are...")
+
+        if random.random() < 0.01:
+            taunts = [
+                "Execute Order 66!",
+                "KENOBI!",
+                "Then you will die!",
+                "There is no mercy.",
+                "I will pull the rebels apart, piece by piece.",
+                "You can't run from the Dark Side. I shall return.",
+                "Futile. Your destiny is already sealed.",
+                "Running only hastens your fall."
+            ]
             print(random.choice(taunts))
-        
-        # Lightsaber slice effect
-        if random.random() < 0.005:  # Random chance to slice
+
+        if random.random() < 0.005:
             lightsaber_sound.play()
-            print("Sith Green Warrior slices the screen!")
-    
+            screen.blit(lightsaber_sprite, (x + 50, y))
+            pygame.draw.line(screen, (255, 69, 0), (0, y + 50), (SCREEN_WIDTH, y + 50), 6)
+            print("Sith Green Warrior slices the screen with a burning saber!")
+
     elif idle_mode:
         if idle_state == "meditating":
             screen.blit(meditating_sprite, (x, y))
-            if random.random() < 0.002:  # Change idle state occasionally
+            if random.random() < 0.002:
                 idle_state = "floating"
         elif idle_state == "floating":
-            cursor_x, cursor_y = pyautogui.position()
-            if cursor_x > x:
-                x += 2
-            elif cursor_x < x:
-                x -= 2
-            if cursor_y > y:
-                y += 2
-            elif cursor_y < y:
-                y -= 2
+            if abs(cursor_x - x) < 300 and abs(cursor_y - y) < 300:
+                if cursor_x > x:
+                    x += 2
+                elif cursor_x < x:
+                    x -= 2
+                if cursor_y > y:
+                    y += 2
+                elif cursor_y < y:
+                    y -= 2
             screen.blit(floating_sprite, (x, y))
             if random.random() < 0.002:
                 idle_state = "frog_eating"
@@ -111,15 +137,14 @@ while running:
             screen.blit(frog_sprite, (x, y))
             time.sleep(1)
             burp_sound.play()
-            idle_state = "meditating"  # Reset after eating
+            idle_state = "meditating"
     else:
         screen.blit(sprite, (x, y))
-    
-    # Render chat box
+
     txt_surface = font.render(text, True, color)
     screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
     pygame.draw.rect(screen, color, input_box, 2)
-    
+
     pygame.display.update()
     time.sleep(0.01)
 
