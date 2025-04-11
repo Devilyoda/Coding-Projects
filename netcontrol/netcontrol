@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""
+NetControl - Master Controller for Network Scripts
+
+Launch and manage all custom network/security tools from one interface.
+
+Tools supported:
+- pingsweep
+- portscan
+- netwatch
+- servwatch
+- logwatch
+
+Usage Examples:
+    netcontrol                # Interactive menu
+    netcontrol --tool pingsweep --args "192.168.1.0/24 -o live_hosts.csv"
+    netcontrol --run-all     # Run all tools sequentially
+
+Requirements:
+    All scripts must be globally accessible (e.g., in /usr/local/bin)
+"""
+
+import argparse
+import subprocess
+import sys
+import textwrap
+
+VERSION = "1.1"
+
+TOOLS = {
+    "pingsweep": "pingsweep",
+    "portscan": "portscan",
+    "netwatch": "netwatch",
+    "servwatch": "servwatch",
+    "logwatch": "logwatch",
+}
+
+CHANGELOG = """
+Changelog:
+- v1.1: Enhancements
+  • Auto show banner on every run
+  • Added --check-updates option
+  • Improved help formatting
+- v1.0: Initial stable release
+  • All 5 tools supported
+  • Interactive menus with presets
+  • Custom CLI argument support
+  • Global launcher script ready
+"""
+
+def show_banner():
+    print("""
+╔══════════════════════════════════╗
+║     NetControl v{} Loaded        ║
+╚══════════════════════════════════╝
+    """.format(VERSION))
+
+def show_help():
+    print(textwrap.dedent("""
+    Usage:
+        netcontrol                     # Launch interactive menu
+        netcontrol --tool TOOL --args "ARGS"
+        netcontrol --run-all
+
+    Options:
+        --tool        Run a specific tool (e.g., portscan)
+        --args        Arguments to pass to that tool
+        --run-all     Run all tools in sequence
+        --version     Show version info
+        --changelog   Show recent updates
+    """))
+
+def show_changelog():
+    print(CHANGELOG)
+
+def run_tool(tool, args=""):
+    cmd = f"{TOOLS[tool]} {args}"
+    print(f"\n[+] Running: {cmd}\n")
+    subprocess.call(cmd, shell=True)
+
+def pingsweep_menu():
+    print("""
+Pingsweep Options:
+1. Scan 192.168.1.0/24 (default)
+2. Scan 10.0.0.0/24
+3. Scan 172.16.0.0/24
+4. Scan custom subnet
+5. Scan with custom thread count
+6. Scan and save to live_hosts.csv
+7. Scan and save to custom CSV
+8. Full custom args
+9. Manual input
+    """)
+    option = input("Choose option: ").strip()
+
+    if option == "1":
+        run_tool("pingsweep", "192.168.1.0/24")
+    elif option == "2":
+        run_tool("pingsweep", "10.0.0.0/24")
+    elif option == "3":
+        run_tool("pingsweep", "172.16.0.0/24")
+    elif option == "4":
+        subnet = input("Enter custom subnet: ")
+        run_tool("pingsweep", f"{subnet}")
+    elif option == "5":
+        subnet = input("Subnet: ")
+        threads = input("Threads: ")
+        run_tool("pingsweep", f"{subnet} -t {threads}")
+    elif option == "6":
+        run_tool("pingsweep", "192.168.1.0/24 -o live_hosts.csv")
+    elif option == "7":
+        subnet = input("Subnet: ")
+        output = input("CSV Output File: ")
+        run_tool("pingsweep", f"{subnet} -o {output}")
+    elif option == "8":
+        subnet = input("Subnet: ")
+        output = input("CSV Output File (optional): ")
+        threads = input("Threads (optional): ")
+        args = subnet
+        if output:
+            args += f" -o {output}"
+        if threads:
+            args += f" -t {threads}"
+        run_tool("pingsweep", args)
+    elif option == "9":
+        args = input("Manually enter pingsweep args: ")
+        run_tool("pingsweep", args)
+    else:
+        print("Invalid option.")
+
+def portscan_menu():
+    target_file = input("Target file (e.g., targets.txt): ")
+    ports = input("Ports or ranges (e.g., 22,80 or 1-65535): ")
+    threads = input("Threads [default 100]: ") or "100"
+    output = input("Output CSV file name: ")
+    fast = input("Use fast scan? (y/n): ").lower() == "y"
+    args = f"-f {target_file} -o {output} -t {threads}"
+    if ports:
+        args += f" -p {ports}"
+    if fast:
+        args += " --fast"
+    run_tool("portscan", args)
+
+def netwatch_menu():
+    target_file = input("Target file for netwatch (e.g., targets.txt): ")
+    interval = input("Interval in seconds [default 30]: ") or "30"
+    output = input("Output CSV file name (optional): ")
+    args = f"-f {target_file} -i {interval}"
+    if output:
+        args += f" -o {output}"
+    run_tool("netwatch", args)
+
+def servwatch_menu():
+    service_file = input("Service file (IP:port per line): ")
+    interval = input("Interval in seconds [default 30]: ") or "30"
+    output = input("Output CSV file name: ")
+    args = f"-f {service_file} -i {interval} -o {output}"
+    run_tool("servwatch", args)
+
+def logwatch_menu():
+    log_file = input("Log file path: ")
+    keyword = input("Filter keyword(s) (comma-separated): ")
+    use_tail = input("Tail the log? (y/n): ").lower() == "y"
+    use_tui = input("Use TUI interface? (y/n): ").lower() == "y"
+    output = input("CSV output file (optional): ")
+
+    args = f"-f {log_file}"
+    if keyword:
+        args += f" --filter {keyword}"
+    if use_tail:
+        args += " --tail"
+    if use_tui:
+        args += " --tui"
+    if output:
+        args += f" --output {output}"
+    run_tool("logwatch", args)
+
+def interactive_menu():
+    show_banner()
+    while True:
+        print("""
+======= NetControl Menu =======
+1. Ping Sweep
+2. Port Scanner
+3. Net Watch
+4. Service Watch
+5. Log Watch
+6. Run All
+0. Exit
+        """)
+        choice = input("Select a tool to run: ").strip()
+
+        if choice == "1":
+            pingsweep_menu()
+        elif choice == "2":
+            portscan_menu()
+        elif choice == "3":
+            netwatch_menu()
+        elif choice == "4":
+            servwatch_menu()
+        elif choice == "5":
+            logwatch_menu()
+        elif choice == "6":
+            for t in TOOLS:
+                run_tool(t)
+        elif choice == "0":
+            print("Exiting NetControl.")
+            break
+        else:
+            print("Invalid choice. Try again.")
+
+def main():
+    show_banner()
+    parser = argparse.ArgumentParser(description="NetControl - Master Network Tool Controller")
+    parser.add_argument("--tool", help="Tool name to run (e.g. pingsweep, portscan)")
+    parser.add_argument("--args", help="Arguments to pass to the tool")
+    parser.add_argument("--run-all", action="store_true", help="Run all tools in order")
+    parser.add_argument("--version", action="store_true", help="Show version info")
+    parser.add_argument("--changelog", action="store_true", help="Show changelog")
+    parser.add_argument("--help-menu", action="store_true", help="Show help info")
+    parser.add_argument("--check-updates", action="store_true", help="Check for newer version (manual)")
+
+    args = parser.parse_args()
+
+    if args.version:
+        return
+    elif args.changelog:
+        show_changelog()
+    elif args.help_menu:
+        show_help()
+    elif args.check_updates:
+        import urllib.request
+        try:
+            remote_url = "https://raw.githubusercontent.com/Devilyoda/netcontrol/main/version.txt"
+            with urllib.request.urlopen(remote_url, timeout=5) as response:
+                latest_version = response.read().decode().strip()
+            if latest_version != VERSION:
+                print(f"
+[!] Update available: v{latest_version} (You have v{VERSION})")
+                print("    Visit https://github.com/Devilyoda/netcontrol to update.")
+            else:
+                print(f"
+[✓] You are using the latest version (v{VERSION})")
+        except Exception as e:
+            print(f"[-] Failed to check for updates: {e}")
+    elif args.run_all:
+        for t in TOOLS:
+            run_tool(t)
+    elif args.tool:
+        if args.tool in TOOLS:
+            run_tool(args.tool, args.args or "")
+        else:
+            print(f"[-] Unknown tool: {args.tool}")
+    else:
+        interactive_menu()
+
+if __name__ == "__main__":
+    main()
