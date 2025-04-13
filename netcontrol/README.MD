@@ -1,86 +1,137 @@
 # NetControl
 
-**NetControl** is a unified command-line interface for launching and managing network/security automation tools. It was built to simplify scanning, monitoring, and log analysis in real-world IT and cybersecurity environments.
+![NetControl Logo](https://img.shields.io/badge/Devilyoda-Tool-green?style=for-the-badge)
 
-Created by **Chris Giggleman** under the **Devilyoda Products** brand.
+**NetControl** is a master network operations controller for launching and managing all your custom Python-based network scripts from a single interface.
 
----
-
-## 🚀 Features
-
-- Centralized controller for:
-  - ✅ Ping Sweep
-  - ✅ Port Scanner
-  - ✅ Network Watcher (Uptime + Baseline tracking)
-  - ✅ Service Watch (host:port availability)
-  - ✅ Log Watch (filter and monitor logs)
-- Interactive menu UI
-- CLI arguments support for automation
-- Run all tools in sequence
-- Colorized output with `rich`
-- Timeout support for long-running monitors
+Developed with ❤️ by **Chris Giggleman** for [Devilyoda Products](https://github.com/devilyoda).
 
 ---
 
-## 🛠 Installation
+## 📦 Features
+- Centralized interface for:
+  - Ping sweeps
+  - Port scanning
+  - Network uptime monitoring
+  - Service health checks
+  - Log file watching
+- Custom presets & CLI arguments
+- Real-time TUI (using `rich`)
+- Designed for Linux environments
+- Installable as a `.deb` package
 
-1. **Place all scripts** in a project folder (e.g., `~/Documents/Scripts`).
-2. **Make each script executable**:
-   ```bash
-   chmod +x script_name.py
+---
 
-Move them to a global path (e.g., /usr/local/bin) and rename:
-sudo mv ping_sweep.py /usr/local/bin/pingsweep
-sudo mv port_scanner.py /usr/local/bin/portscan
-sudo mv netwatch.py /usr/local/bin/netwatch
-sudo mv servwatch.py /usr/local/bin/servwatch
-sudo mv logwatch.py /usr/local/bin/logwatch
-sudo mv netcontrol.py /usr/local/bin/netcontrol
+## 📂 Project Structure
+```
+netcontrol/
+├── netcontrol.py                 # Launcher script
+├── netcontrol_1.1_all.deb       # Installable package (optional in GitHub repo)
+├── netcontrol-deb/              # Debian packaging folder
+│   ├── DEBIAN/
+│   │   ├── control
+│   │   ├── postinst
+│   │   └── prerm
+│   └── usr/
+│       └── local/
+│           └── bin/
+│               ├── netcontrol
+│               ├── pingsweep
+│               ├── portscan
+│               ├── netwatch
+│               ├── servwatch
+│               └── logwatch
+├── README.md
+└── Scripts/                     # Raw Python files
+    ├── pingsweep.py
+    ├── portscan.py
+    ├── netwatch.py
+    ├── servwatch.py
+    ├── logwatch.py
+```
 
-Run from anywhere:
-netcontrol
+---
 
-📋 Script Usage Examples
-🔹 Pingsweep
-Discover live hosts on a subnet.
+## 🚀 Installation
+
+### Option 1: Using the `.deb` Installer
+
+```bash
+sudo dpkg -i netcontrol_1.1_all.deb
+```
+
+> Make sure dependencies are installed:
+```bash
+sudo apt install python3-rich python3-commonmark python3-pygments
+```
+
+### Option 2: Manual Setup
+
+1. Copy all `Scripts/*.py` files into `/usr/local/bin`.
+2. Rename them to match the global commands:
+
+```bash
+sudo cp pingsweep.py /usr/local/bin/pingsweep
+sudo chmod +x /usr/local/bin/pingsweep
+# Repeat for all scripts
+```
+
+---
+
+## 🧪 Real-World Usage Examples
+
+### 🔹 Ping Sweep
+```bash
 pingsweep 192.168.1.0/24 -t 100 -o live_hosts.csv
-🔹 Portscan
+```
 
-Scan for open ports and services.
-portscan -f targets.txt -o results.csv -p 22,80,443 -t 50
-🔹 Netwatch
+### 🔹 Port Scanner
+```bash
+portscan -f targets.txt -o portscan.csv -t 100 -p 22,80,443
+```
 
-Monitor host uptime on a schedule.
-netwatch -f targets.txt -o netwatch_log.csv --interval 60 -t 50 --baseline
-🔹 Servwatch
+### 🔹 Net Watch
+```bash
+netwatch -f targets.txt -o netwatch_log.csv --interval 60 --baseline
+```
 
-Check TCP port status on services.
+### 🔹 Service Watch
+```bash
 servwatch -f services.txt -o service_log.csv --interval 30
-🔹 Logwatch
+```
 
-Track logs with filters and regex.
-logwatch -f /var/log/syslog --filter DROP --output blocked.csv
+### 🔹 Log Watch
+```bash
+logwatch -f /var/log/syslog --filter DROP -o alert_log.csv
+```
 
-🔧 Running the Controller
-netcontrol
+### 🔹 Master Control
+```bash
+netcontrol                    # Launch the full TUI menu
+netcontrol --tool portscan --args "-f targets.txt -o scan.csv"
+netcontrol --run-all         # Run all tools in sequence
+```
 
-This will launch the interactive dashboard:
-======= NetControl Menu =======
-1. Ping Sweep
-2. Port Scanner
-3. Net Watch
-4. Service Watch
-5. Log Watch
-6. Run All
-0. Exit
+---
 
-CLI options:
-netcontrol --tool portscan --args "-f targets.txt -o result.csv"
-netcontrol --run-all
+## 🔧 Build Your Own .deb Package (Advanced)
+To build the `.deb` installer:
+```bash
+dpkg-deb --build netcontrol-deb netcontrol_1.1_all.deb
+```
 
-📁 Input Files
-targets.txt: List of IPs for scanning/monitoring
-services.txt: Format host:port, one per line
+---
 
-🧠 About the Creator
-Chris Giggleman is an IT professional with a passion for automation and security. His brand Devilyoda Products focuses on practical tools for IT professionals and cybersecurity teams.
+## 📜 License
+MIT License © 2024 Chris Giggleman, Devilyoda Products
+
+---
+
+## 🌐 Connect
+GitHub: [@devilyoda](https://github.com/devilyoda)  
+Twitter/X: [@DevilyodaTech](https://twitter.com/devilyodatech)
+
+---
+
+Happy hacking! 💻🧠
+
