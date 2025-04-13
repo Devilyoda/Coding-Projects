@@ -1,10 +1,12 @@
 # NetControl
 
 ![NetControl Logo](https://img.shields.io/badge/Devilyoda-Tool-green?style=for-the-badge)
+[![GitHub Release](https://img.shields.io/github/v/release/devilyoda/netcontrol?style=flat-square)](https://github.com/devilyoda/Coding-Projects/releases)
+[![License](https://img.shields.io/github/license/devilyoda/netcontrol?style=flat-square)](./LICENSE)
 
 **NetControl** is a master network operations controller for launching and managing all your custom Python-based network scripts from a single interface.
 
-Developed with ❤️ by **Chris Giggleman** for [Devilyoda Products](https://github.com/devilyoda).
+Developed by **Chris Giggleman** for [Devilyoda Products](https://github.com/devilyoda).
 
 ---
 
@@ -71,9 +73,15 @@ sudo apt install python3-rich python3-commonmark python3-pygments
 2. Rename them to match the global commands:
 
 ```bash
-sudo cp pingsweep.py /usr/local/bin/pingsweep
+sudo cp Scripts/pingsweep.py /usr/local/bin/pingsweep
 sudo chmod +x /usr/local/bin/pingsweep
-# Repeat for all scripts
+# Repeat for all scripts:
+sudo cp Scripts/portscan.py /usr/local/bin/portscan
+sudo cp Scripts/netwatch.py /usr/local/bin/netwatch
+sudo cp Scripts/servwatch.py /usr/local/bin/servwatch
+sudo cp Scripts/logwatch.py /usr/local/bin/logwatch
+sudo cp netcontrol.py /usr/local/bin/netcontrol
+sudo chmod +x /usr/local/bin/*
 ```
 
 ---
@@ -115,9 +123,44 @@ netcontrol --run-all         # Run all tools in sequence
 ---
 
 ## 🔧 Build Your Own .deb Package (Advanced)
+
 To build the `.deb` installer:
+
 ```bash
 dpkg-deb --build netcontrol-deb netcontrol_1.1_all.deb
+```
+
+---
+
+## 📸 Screenshots (Optional)
+
+| Master Menu | Ping Sweep | Port Scan |
+|-------------|------------|-----------|
+| ![Menu](https://via.placeholder.com/300x150?text=Main+Menu) | ![Ping](https://via.placeholder.com/300x150?text=Ping+Sweep) | ![Port](https://via.placeholder.com/300x150?text=Port+Scan) |
+
+---
+
+## 🤝 Contributing
+
+Got improvements or issues? [Open an Issue](https://github.com/devilyoda/netcontrol/issues) or submit a pull request!
+
+---
+
+## 🔐 GPG + SSH Key Authentication
+
+To push securely using GitHub CLI or terminal:
+
+```bash
+# Set global identity
+git config --global user.name "Chris Giggleman"
+git config --global user.email "your_email@example.com"
+
+# Generate SSH key (optional)
+ssh-keygen -t ed25519 -C "your_email@example.com"
+cat ~/.ssh/id_ed25519.pub  # Add this to GitHub under SSH keys
+
+# Or use a Personal Access Token (PAT)
+# Copy from GitHub → Settings → Developer Settings → Tokens → Generate new token (Classic)
 ```
 
 ---
@@ -134,4 +177,3 @@ Twitter/X: [@DevilyodaTech](https://twitter.com/devilyodatech)
 ---
 
 Happy hacking! 💻🧠
-
