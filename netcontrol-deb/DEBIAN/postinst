@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "NetControl installed! Run 'netcontrol' in the terminal to begin."
+

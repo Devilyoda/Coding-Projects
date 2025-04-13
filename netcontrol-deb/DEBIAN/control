@@ -1,0 +1,10 @@
+Package: netcontrol
+Version: 1.1
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-rich
+Maintainer: Chris Giggleman Devilyoda@live.com
+Description: NetControl - Devilyoda CLI toolkit for network monitoring
+ A powerful and modular command-line tool built for sysadmins and security analysts.
+ Contains pingsweep, portscan, netwatch, servwatch, and logwatch.
