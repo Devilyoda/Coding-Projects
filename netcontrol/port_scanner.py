@@ -1,198 +1,165 @@
 #!/usr/bin/env python3
 """
-Advanced Multi-Target Port Scanner (Cross-Platform)
+PortScan - Custom Port Scanner
 
-Scans one or multiple targets for open TCP ports.
-Supports full port range scanning, port lists/ranges, service detection, banner grabbing, CSV output, and filtering.
+Scans ports for given IPs and outputs open/closed results in a CSV file.
 
-Features:
-- Works on Windows, Linux, macOS
-- Custom port lists or full-range
-- Banner grabbing + service name
-- CSV + logging output
-- Auto-generates targets.txt if missing
-
-USAGE EXAMPLES:
-
-    # Scan full TCP port range on multiple targets from a file
-    portscan -f targets.txt -o full_report.csv
-
-    # Scan specific ports and port ranges
-    portscan -f targets.txt -p 22,80,443,1000-1100 -o scan.csv
-
-    # Filter results to show only banners containing "http"
-    portscan -f targets.txt -o scan.csv --filter "http"
-
-    # Optional: Use fast mode (top 1000 ports)
-    portscan -f targets.txt --fast -o scan.csv
-
-Arguments:
-    -f, --file        File containing list of IPs/hostnames to scan (one per line)
-    -p, --ports       Comma-separated list of ports and/or ranges (e.g., 22,80,443,1000-2000)
-    -o, --output      Output CSV file (required)
-    -t, --threads     Number of threads (default: 100)
-    --filter          Keyword to match in banner (optional)
-    --fast            Scan only top 1000 ports
-
-Dependencies:
-    pip install colorama tqdm
-
-Tested on Windows, Linux, macOS
+Usage Examples:
+    portscan -f targets.txt -o results.csv -t 100 --fast
+    portscan -f targets.txt -o results.csv -p 22,80,443 --timeout 3
 """
 
-import socket
 import argparse
+import socket
 import csv
-import logging
-import os
+import concurrent.futures
+import ipaddress
+import string
 from tqdm import tqdm
-from colorama import Fore, init
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from socket import getservbyport
+import subprocess
+import os
 
-init(autoreset=True)
+def clean_banner(text):
+    return ''.join(c if c in string.printable else '?' for c in text).strip()
 
-TOP_PORTS = [
-    21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445,
-    993, 995, 1723, 3306, 3389, 5900, 8080, 8443
-] + list(range(1, 1025))
+def scan_port(ip, port, timeout):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((ip, port))
+            if result == 0:
+                try:
+                    sock.sendall(b"\r\n")
+                    banner = sock.recv(1024).decode(errors="ignore")
+                    banner = clean_banner(banner)
+                except:
+                    banner = "-"
+                return (ip, port, "open", get_service_name(port), banner)
+            else:
+                return (ip, port, "closed", get_service_name(port), "-")
+    except:
+        return None  # skip error ports completely
 
-def setup_logger():
-    log_file = f"portscan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.INFO,
-        format='[%(asctime)s] %(levelname)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    logging.info("Logger initialized")
-    return log_file
+def get_service_name(port):
+    try:
+        return getservbyport(port)
+    except:
+        return "-"
 
-def parse_ports(port_str):
+def parse_ports(ports_str):
     ports = set()
-    for part in port_str.split(","):
+    for part in ports_str.split(","):
         if "-" in part:
             start, end = map(int, part.split("-"))
             ports.update(range(start, end + 1))
         else:
-            ports.add(int(part.strip()))
+            ports.add(int(part))
     return sorted(ports)
 
-def grab_banner(ip, port):
-    try:
-        with socket.socket() as s:
-            s.settimeout(2)
-            s.connect((ip, port))
-            s.sendall(b"HEAD / HTTP/1.1\r\n\r\n")
-            return s.recv(1024).decode(errors="ignore").strip()
-    except:
-        return ""
+def load_targets(file):
+    with open(file, "r") as f:
+        return [line.strip() for line in f if line.strip()]
 
-def scan_port(ip, port):
+def write_csv(results, output_file):
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex((ip, port))
-        sock.close()
-        if result == 0:
-            try:
-                service = socket.getservbyport(port)
-            except:
-                service = "Unknown"
-            banner = grab_banner(ip, port)
-            logging.info(f"{ip}:{port} open | {service}")
-            return (ip, port, service, banner)
+        with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_ALL, escapechar="\\")
+            writer.writerow(["IP", "Port", "Status", "Service", "Banner"])
+            for row in results:
+                if row:  # Skip None values from errors
+                    row = list(row)
+                    row[4] = clean_banner(str(row[4]))
+                    writer.writerow(row)
+        print(f"[+] Results saved to: {output_file}")
+
+        # Try to open with LibreOffice Calc
+        try:
+            subprocess.Popen(["libreoffice", "--calc", os.path.abspath(output_file)])
+        except Exception as e:
+            print(f"[!] Could not open with LibreOffice Calc: {e}")
+
     except Exception as e:
-        logging.warning(f"{ip}:{port} error: {e}")
-    return None
+        print(f"[-] Failed to save CSV: {e}")
+
+def choose_ports():
+    print("""
+Port Options:
+1. Common ports (22,80,443)
+2. Top 1000 ports (fast scan)
+3. Full scan (1-65535)
+4. Custom ports
+    """)
+    choice = input("Choose port scan type: ").strip()
+    if choice == "1":
+        return [22, 80, 443]
+    elif choice == "2":
+        return "fast"
+    elif choice == "3":
+        return list(range(1, 65536))
+    elif choice == "4":
+        custom = input("Enter ports or range (e.g., 80,443 or 1-1024): ").strip()
+        return parse_ports(custom)
+    else:
+        print("Invalid choice, using default common ports.")
+        return [22, 80, 443]
+
+def validate_ip(ip):
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Advanced Multi-Target Port Scanner (Cross-Platform)")
-    parser.add_argument("-f", "--file", help="File with list of targets (one per line)", required=True)
-    parser.add_argument("-p", "--ports", help="Comma-separated ports or ranges (e.g. 22,80,1000-2000)")
-    parser.add_argument("-o", "--output", help="CSV output file", required=True)
-    parser.add_argument("-t", "--threads", help="Number of threads (default: 100)", type=int, default=100)
-    parser.add_argument("--filter", help="Only include banners containing this keyword")
-    parser.add_argument("--fast", help="Scan only top 1000 common ports", action="store_true")
-
+    parser = argparse.ArgumentParser(description="Custom Port Scanner")
+    parser.add_argument("-f", "--file", required=True, help="Input file with IPs")
+    parser.add_argument("-o", "--output", required=True, help="CSV output file")
+    parser.add_argument("-t", "--threads", type=int, default=100, help="Number of threads")
+    parser.add_argument("-p", "--ports", help="Ports to scan (e.g., 80,443 or 1-1000)")
+    parser.add_argument("--fast", action="store_true", help="Scan top 1000 ports")
+    parser.add_argument("--timeout", type=float, default=1, help="Socket timeout")
+    parser.add_argument("--clean", action="store_true", help="Remove error ports from CSV")
     args = parser.parse_args()
-    log_file = setup_logger()
 
-    # --------------------------------
-    # Load targets or create the file
-    # --------------------------------
-    if not os.path.isfile(args.file):
-        print(Fore.RED + f"[-] File not found: {args.file}")
-        if os.path.basename(args.file) == "targets.txt":
-            try:
-                with open(args.file, "w") as f:
-                    f.write("# Add one IP or hostname per line\n")
-                print(Fore.YELLOW + f"[+] Created a new empty file: {args.file}")
-                print(Fore.CYAN + f"[!] Please edit the file and add your targets before re-running.")
-            except Exception as e:
-                print(Fore.RED + f"[-] Failed to create {args.file}: {e}")
-        return
-    else:
-        try:
-            with open(args.file, "r") as f:
-                targets = [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            print(Fore.RED + f"[-] Could not read file {args.file}: {e}")
-            return
-
-    if not targets:
-        print(Fore.RED + "[-] Target file is empty. Please add one target per line.")
-        return
+    top_ports = [
+        21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 993, 995,
+        1723, 3306, 3389, 5900, 8080, 8443
+    ] + list(range(1, 1025))
 
     if args.fast:
-        ports = TOP_PORTS
-        print(Fore.CYAN + f"[!] Fast scan enabled. Scanning top {len(ports)} ports.")
+        ports = sorted(set(top_ports))
     elif args.ports:
         ports = parse_ports(args.ports)
     else:
-        ports = list(range(1, 65536))
-        print(Fore.YELLOW + f"[!] No ports specified. Scanning ALL 65535 TCP ports. This may take a while...")
+        ports = choose_ports()
+        if ports == "fast":
+            ports = sorted(set(top_ports))
 
-    print(Fore.CYAN + f"[+] Scanning {len(targets)} targets on {len(ports)} ports each.\n")
+    targets = load_targets(args.file)
+    valid_targets = [ip for ip in targets if validate_ip(ip)]
+
+    if not valid_targets:
+        print("[-] No valid IP addresses found.")
+        return
+
+    total_tasks = len(valid_targets) * len(ports)
+    print(f"[+] Scanning {len(valid_targets)} targets on {len(ports)} ports each.")
+
     results = []
-
-    with ThreadPoolExecutor(max_workers=args.threads) as executor:
-        future_to_scan = {}
-        for target in targets:
-            try:
-                ip = socket.gethostbyname(target)
-            except socket.gaierror:
-                print(Fore.RED + f"[-] Cannot resolve {target}. Skipping.")
-                continue
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
+        futures = []
+        for ip in valid_targets:
             for port in ports:
-                future = executor.submit(scan_port, ip, port)
-                future_to_scan[future] = target
+                futures.append(executor.submit(scan_port, ip, port, args.timeout))
 
-        for future in tqdm(as_completed(future_to_scan), total=len(future_to_scan), desc="Scanning", ncols=80):
-            result = future.result()
-            if result:
-                ip, port, service, banner = result
-                if args.filter and args.filter.lower() not in banner.lower():
-                    continue
-                print(Fore.GREEN + f"[+] {ip}:{port} open | {service} | {banner[:60]}")
-                results.append(result)
+        for result in tqdm(concurrent.futures.as_completed(futures), total=total_tasks, desc="Scanning"):
+            res = result.result()
+            if res or not args.clean:
+                results.append(res)
 
-    try:
-        output_path = os.path.abspath(args.output)
-        with open(output_path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["IP", "Port", "Service", "Banner"])
-            for row in results:
-                writer.writerow(row)
-        print(f"\n{Fore.YELLOW}[+] Results saved to: {output_path}")
-        logging.info(f"Results saved to: {output_path}")
-    except Exception as e:
-        print(Fore.RED + f"[-] Failed to write CSV: {e}")
-        logging.error(f"Failed to write CSV: {e}")
-
-    print(Fore.CYAN + f"\n[+] Scan complete. {len(results)} open ports found across {len(targets)} hosts.")
-    logging.info(f"Scan complete. {len(results)} results.")
-    logging.info(f"Log saved to {log_file}")
+    write_csv(results, args.output)
+    print("[+] Scan complete.")
 
 if __name__ == "__main__":
     main()
